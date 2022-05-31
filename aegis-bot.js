@@ -1,32 +1,33 @@
 //**************************************
 //***********SETUP STUFF****************
 //**************************************
-// Load token from .env file
+// Load data from .env file
 import dotenv from 'dotenv'
 dotenv.config()
 export const DISCORD_TOKEN = process.env.DISCORD_TOKEN
+export const LOGGER_LEVEL = process.env.LOGGER_LEVEL
+const DO_NOT_REPLY = process.env.DO_NOT_REPLY === "true"
 
+import config from 'config'
 import { Client, Intents } from 'discord.js'
 import { createLogger, transports } from 'winston'
 import { text } from 'alex'
 
+const profaneHelptext = (found) => "Be careful with `" + found + "`, it's profane in some cases"
+const insensitiveHelptext = (found) => "`" + found + "` may be insensitive, use a more sensitive alternative instead"
+
 // Parameters to change alex default configs
-const probabilityOfResponse = 0.5
-const exemptUsers = ['The Androgynous Aegis of Athena']
-const usersNeedingTraining = ['Justin']
-const additionalDenies = [{
-    find: 'justin',
-    helptext: (found) => "Be careful with `" + found + "`, it's profane in some cases"
-}]
-const allowList = ['just']
-const alexDefaultConfig = {
-    "noBinary": true,
-    "profanitySureness": 1
-}
+const probabilityOfResponse = config.has('probabilityOfResponse') ? config.get('probabilityOfResponse') : 1
+const approvedChannels = config.has('approvedChannels') ? config.get('approvedChannels') : []
+const exemptUsers = config.has('exemptUsers') ? config.get('exemptUsers') : []
+const usersNeedingTraining = config.has('usersNeedingTraining') ? config.get('usersNeedingTraining') : []
+const additionalDenies = config.has('additionalDenies') ? buildAdditionalDenies(config.get('additionalDenies')) : []
+const allowList = config.has('allowList') ? config.get('allowList') : []
+const alexDefaultConfig = config.has('alexDefaultConfig') ? config.get('alexDefaultConfig') : null
 
 // Configure logger settings
 const logger = createLogger({
-    level: 'debug',
+    level: LOGGER_LEVEL,
     transports: [new transports.Console()],
 })
 
@@ -38,12 +39,31 @@ const client = new Client({
 
 client.on('ready', () => {
     logger.info(`Logged in as: ${client.user.tag}`)
+    exemptUsers.push(`${client.user.username}`)
+    logger.debug('exemptUsers: ' + exemptUsers)
 })
 
 client.login(DISCORD_TOKEN)
 
 // Wait for newly created messages, and process accordingly
 client.on('messageCreate', processMessage)
+
+function buildAdditionalDenies(denies) {
+    const additionalDenies = []
+    for (const [key, value] of Object.entries(denies)) {
+        var helptext = profaneHelptext
+        if (value === 'insensitive') {
+            helptext = insensitiveHelptext
+        }
+
+        additionalDenies.push({
+            find: key,
+            helptext: helptext
+        })
+    }
+    
+    return additionalDenies
+}
 
 function buildReply(msgs) {
     let reply = ''
@@ -106,21 +126,28 @@ function sendThroughCrook3d(content, denyList) {
 }
 
 function processMessage(message) {
+    if (approvedChannels.indexOf(message.channel.name) === -1) {
+        // This channel is not approved for the bot, so do not process the message.
+        return
+    }
+
     const username = message.author.username
     logger.debug('user: ' + username)
     
     if (exemptUsers.indexOf(username) > -1) {
         // This user is exempt, so do not process the message.
-        return;
+        return
     }
 
     const content = message.content
 
     let reply = sendThroughAlex(username, content, alexDefaultConfig)
     reply += sendThroughCrook3d(content, additionalDenies)
-    logger.debug('reply: ' + reply)
     
-    if (reply.length > 0) {
+    if (DO_NOT_REPLY) {
+        logger.debug('DO_NOT_REPLY set to true, NOT REPLYING, but this would be the reply: ' + reply)
+    } else if (reply.length > 0) {
+        logger.debug('reply: ' + reply)
         message.reply(reply)
         .catch(logger.error)
     }
