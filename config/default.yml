@@ -1,0 +1,15 @@
+---
+#alexDefaultConfig:
+#  noBinary: true
+#  profanitySureness: 0
+#probabilityOfResponse: 0.5
+#approvedChannels:
+#  - test
+#exemptUsers:
+#  - test
+#usersNeedingTraining:
+#  - Justin
+#additionalDenies:
+#  - justin: profane
+#allowList:
+#  - just
