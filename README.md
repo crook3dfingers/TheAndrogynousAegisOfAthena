@@ -1,4 +1,4 @@
-# TheAndrogynousAegisOfAthena
+# The Androgynous Aegis of Athena
 A discord bot for suggesting more inclusive language in discord channels.
 
 Add a .env file with the following lines:
