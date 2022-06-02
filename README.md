@@ -11,5 +11,7 @@ To change the bot username/avatar, run the following:
 ```bash
 $ IMAGE=$(base64 -w 0 rainbow-star.png)
 
-$ curl -H 'Authorization: Bot {YOUR_DISCORD_BOT_TOKEN}' -H "Content-Type: application/json" -X PATCH -d '{"username": "The Androgynous Aegis of Athena", "avatar": "data:image/png;base64,'"$IMAGE"'"}' https://discordapp.com/api/users/@me
+$ echo '{"username": "hr-bot", "avatar": "data:image/png;base64,'"$IMAGE"'"}' > curl.txt
+
+$ curl -H 'Authorization: Bot {YOUR_DISCORD_BOT_TOKEN}' -H "Content-Type: application/json" -X PATCH -d @curl.txt https://discordapp.com/api/users/@me
 ```
